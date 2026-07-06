@@ -3,20 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <style>
-  html,body{margin:0;height:100%;overflow:hidden;background:#050508}
+  html,body{margin:0;height:100%;overflow:hidden;background:#04040a}
   canvas{display:block;width:100vw;height:100vh}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <script>
-/* Generátor video scén Synthetix — deterministický a periodický
-   (perioda PERIOD ms => bezešvá smyčka). Scény: hero | avatar |
-   work1 (síť datových uzlů) | work2 (vlnící se linie) | work3 (pulzující mřížka).
-   ?step=1 → snímky řídí externí skript přes window.renderAt(ms). */
+/* ============================================================
+   Generátor filmových video scén Synthetix
+   Deterministický + periodický (perioda PERIOD ms => bezešvá smyčka).
+   Scény: hero | avatar | work1 | work2 | work3
+   ?step=1 → snímky řídí externí skript přes window.renderAt(ms).
+   ============================================================ */
 const params = new URLSearchParams(location.search);
 const MODE = params.get('mode') || 'hero';
-const PERIOD = 10000;
+const PERIOD = 12000;
 const TAU = Math.PI * 2;
 
 const c = document.getElementById('c');
@@ -24,7 +26,7 @@ const ctx = c.getContext('2d');
 function fit(){ c.width = innerWidth; c.height = innerHeight; }
 fit(); addEventListener('resize', fit);
 
-/* deterministický pseudonáhodný generátor */
+/* deterministický PRNG */
 function mulberry(seed){
   return function(){
     seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
@@ -34,181 +36,244 @@ function mulberry(seed){
   };
 }
 
-/* zrnitost */
+/* -------- zrnitost (film grain) -------- */
 const grain = (() => {
-  const g = document.createElement('canvas');
-  g.width = 160; g.height = 160;
-  const gx = g.getContext('2d');
-  const im = gx.createImageData(160,160);
-  let s = 12345;
+  const g = document.createElement('canvas'); g.width = 200; g.height = 200;
+  const gx = g.getContext('2d'); const im = gx.createImageData(200,200);
+  let s = 987654;
   for (let i=0;i<im.data.length;i+=4){
     s = (s*1103515245 + 12345) & 0x7fffffff;
-    im.data[i]=im.data[i+1]=im.data[i+2]=(s%255); im.data[i+3]=9;
+    im.data[i]=im.data[i+1]=im.data[i+2]=(s%255); im.data[i+3]=10;
   }
-  gx.putImageData(im,0,0);
-  return g;
+  gx.putImageData(im,0,0); return g;
 })();
-function addGrain(w,h){
-  ctx.save(); ctx.globalAlpha = .5;
-  for (let y=0;y<h;y+=160) for (let x=0;x<w;x+=160) ctx.drawImage(grain,x,y);
+function addGrain(w,h,a){
+  ctx.save(); ctx.globalAlpha = a; ctx.globalCompositeOperation='overlay';
+  for (let y=0;y<h;y+=200) for (let x=0;x<w;x+=200) ctx.drawImage(grain,x,y);
   ctx.restore();
 }
 function vignette(w,h,a){
-  const v = ctx.createRadialGradient(w/2,h*.45,0,w/2,h*.45,Math.max(w,h)*.8);
-  v.addColorStop(0,'rgba(0,0,0,0)'); v.addColorStop(1,'rgba(0,0,0,'+a+')');
-  ctx.fillStyle = v; ctx.fillRect(0,0,w,h);
+  const v = ctx.createRadialGradient(w/2,h*.42,0,w/2,h*.42,Math.max(w,h)*.82);
+  v.addColorStop(0,'rgba(0,0,0,0)'); v.addColorStop(.7,'rgba(0,0,0,0)'); v.addColorStop(1,'rgba(0,0,0,'+a+')');
+  ctx.fillStyle=v; ctx.fillRect(0,0,w,h);
 }
-function blob(x,y,rad,rgb,a){
-  const g = ctx.createRadialGradient(x,y,0,x,y,rad);
-  g.addColorStop(0,'rgba('+rgb[0]+','+rgb[1]+','+rgb[2]+','+a+')');
-  g.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle = g; ctx.fillRect(0,0,c.width,c.height);
+function radial(x,y,r,stops){
+  const g = ctx.createRadialGradient(x,y,0,x,y,r);
+  for (const s of stops) g.addColorStop(s[0],s[1]);
+  ctx.fillStyle=g; ctx.fillRect(0,0,c.width,c.height);
 }
+function rgba(rgb,a){ return 'rgba('+rgb[0]+','+rgb[1]+','+rgb[2]+','+a+')'; }
 
-/* ---------- HERO: tmavý kouř + světelné pruhy ---------- */
-function hero(t,w,h){
-  ctx.fillStyle = '#050508'; ctx.fillRect(0,0,w,h);
-  ctx.globalCompositeOperation = 'lighter';
-  const B = [
-    {c:[64,78,132], x:.24,y:.22, ox:.10,oy:.07, r:.62, p:0,   fx:1,fy:1, a:.62},
-    {c:[52,38,92],  x:.78,y:.30, ox:.08,oy:.10, r:.55, p:2.1, fx:1,fy:2, a:.55},
-    {c:[22,62,74],  x:.55,y:.82, ox:.12,oy:.06, r:.60, p:4.2, fx:2,fy:1, a:.50},
-    {c:[90,104,170],x:.38,y:.48, ox:.14,oy:.09, r:.38, p:1.3, fx:1,fy:1, a:.38},
-    {c:[70,48,110], x:.66,y:.60, ox:.09,oy:.12, r:.42, p:5.0, fx:2,fy:2, a:.36},
-  ];
-  for (const b of B){
-    blob((b.x+Math.cos(t*b.fx+b.p)*b.ox)*w, (b.y+Math.sin(t*b.fy+b.p)*b.oy)*h,
-         b.r*Math.max(w,h)*(1+.06*Math.sin(t+b.p)), b.c, b.a);
+/* ============================================================
+   HERO — objemová nebula + částice + perspektivní mřížka + záře
+   ============================================================ */
+const HERO_PUFFS = (() => {
+  const rnd = mulberry(31); const arr = [];
+  const cols = [[70,90,170],[120,80,190],[40,120,150],[90,70,180],[50,80,160],[150,110,210]];
+  for (let i=0;i<16;i++){
+    arr.push({
+      bx: rnd(), by: rnd()*0.9,
+      ox: 0.05+rnd()*0.12, oy: 0.04+rnd()*0.10,
+      fx: 1+((rnd()*2)|0), fy: 1+((rnd()*2)|0),
+      ph: rnd()*TAU, sw: rnd()*TAU,
+      r: 0.22+rnd()*0.34,
+      col: cols[(rnd()*cols.length)|0],
+      a: 0.16+rnd()*0.20
+    });
   }
-  /* jemné diagonální světelné pruhy */
+  return arr;
+})();
+const HERO_PARTS = (() => {
+  const rnd = mulberry(97); const layers = [];
+  for (let L=0;L<3;L++){
+    const ps = []; const depth = (L+1)/3;
+    for (let i=0;i<34;i++){
+      ps.push({ x: rnd(), y: rnd(), r: (0.6+rnd()*1.6)*depth, drift: (0.02+rnd()*0.05), ph: rnd()*TAU, tw: 1+((rnd()*2)|0) });
+    }
+    layers.push({ depth: depth, ps: ps });
+  }
+  return layers;
+})();
+
+function hero(t,w,h){
+  const p = t/TAU; // 0..1
+  // hluboké pozadí
+  const bg = ctx.createLinearGradient(0,0,0,h);
+  bg.addColorStop(0,'#070a16'); bg.addColorStop(0.55,'#05060f'); bg.addColorStop(1,'#030307');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,w,h);
+
+  // nebula (měkké objemové chuchvalce)
+  ctx.globalCompositeOperation='lighter';
+  for (const q of HERO_PUFFS){
+    const swirl = Math.sin(t*0.5 + q.sw)*0.03;
+    const x = (q.bx + Math.cos(t*q.fx + q.ph)*q.ox + swirl)*w;
+    const y = (q.by + Math.sin(t*q.fy + q.ph)*q.oy)*h;
+    const rad = q.r*Math.max(w,h)*(1+0.08*Math.sin(t+q.ph));
+    const a = q.a*(0.75+0.25*Math.sin(t*q.fx + q.ph*1.3));
+    radial(x,y,rad,[[0,rgba(q.col,a)],[0.5,rgba(q.col,a*0.4)],[1,rgba(q.col,0)]]);
+  }
+
+  // perspektivní mřížka (spodní třetina, ubíhá k horizontu)
+  const horizon = h*0.66;
   ctx.save();
-  ctx.translate(w/2,h/2); ctx.rotate(-.35);
+  ctx.globalCompositeOperation='lighter';
+  const N = 16;
+  for (let i=0;i<N;i++){
+    let z = ((i/N) + p) % 1;              // 0=daleko(horizont) .. 1=blízko(dole)
+    const y = horizon + (h-horizon)*(z*z);
+    const a = Math.min(z, 1-z)*0.5;       // fade u horizontu i u kraje
+    ctx.strokeStyle = 'rgba(90,150,230,'+(a*0.5)+')';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke();
+  }
+  const vanish = w*0.5;
+  const cols = 14;
+  for (let i=0;i<=cols;i++){
+    const fx = (i/cols)*2-1;              // -1..1
+    const xBottom = w*0.5 + fx*w*0.9;
+    ctx.strokeStyle = 'rgba(90,150,230,'+(0.10*(1-Math.abs(fx)*0.5))+')';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(vanish,horizon); ctx.lineTo(xBottom,h); ctx.stroke();
+  }
+  // záře na horizontu
+  radial(vanish,horizon, w*0.5, [[0,'rgba(120,150,240,0.16)'],[1,'rgba(120,150,240,0)']]);
+  ctx.restore();
+
+  // částicové pole s hloubkou (parallax + twinkle + záře)
+  ctx.globalCompositeOperation='lighter';
+  for (const layer of HERO_PARTS){
+    for (const pt of layer.ps){
+      const x = ((pt.x + Math.cos(t + pt.ph)*pt.drift) % 1 + 1) % 1 * w;
+      const y = ((pt.y + p*layer.depth*0.4 + Math.sin(t*0.5 + pt.ph)*pt.drift*0.5) % 1 + 1) % 1 * h;
+      const tw = 0.4+0.6*(0.5+0.5*Math.sin(t*pt.tw + pt.ph*4));
+      const r = pt.r*(1.5+tw);
+      radial(x,y,r*6,[[0,'rgba(180,205,255,'+(0.5*tw*layer.depth)+')'],[1,'rgba(180,205,255,0)']]);
+      ctx.fillStyle='rgba(220,232,255,'+(0.8*tw*layer.depth)+')';
+      ctx.beginPath(); ctx.arc(x,y,r*0.7,0,TAU); ctx.fill();
+    }
+  }
+
+  // jemné světelné pruhy (volumetric light)
+  ctx.save();
+  ctx.translate(w*0.5,h*0.35); ctx.rotate(-0.42);
+  ctx.globalCompositeOperation='lighter';
   for (let k=0;k<3;k++){
-    const off = Math.sin(t + k*2.1) * w*.18 + (k-1)*w*.22;
-    const g = ctx.createLinearGradient(off-90,0,off+90,0);
-    g.addColorStop(0,'rgba(120,140,220,0)');
-    g.addColorStop(.5,'rgba(120,140,220,.05)');
-    g.addColorStop(1,'rgba(120,140,220,0)');
-    ctx.fillStyle = g;
-    ctx.fillRect(off-90,-h,180,h*2);
+    const off = Math.sin(t*0.6 + k*2.1)*w*0.16 + (k-1)*w*0.26;
+    const g = ctx.createLinearGradient(off-120,0,off+120,0);
+    g.addColorStop(0,'rgba(140,160,240,0)');
+    g.addColorStop(0.5,'rgba(140,160,240,0.05)');
+    g.addColorStop(1,'rgba(140,160,240,0)');
+    ctx.fillStyle=g; ctx.fillRect(off-120,-h,240,h*2.4);
   }
   ctx.restore();
-  ctx.globalCompositeOperation = 'source-over';
-  vignette(w,h,.55); addGrain(w,h);
+
+  ctx.globalCompositeOperation='source-over';
+  vignette(w,h,0.6);
+  addGrain(w,h,0.5);
 }
 
-/* ---------- AVATAR: pulzující orb ---------- */
+/* ============================================================
+   AVATAR — pulzující AI orb s prstenci
+   ============================================================ */
 function avatar(t,w,h){
-  ctx.fillStyle = '#0a0912'; ctx.fillRect(0,0,w,h);
-  ctx.globalCompositeOperation = 'lighter';
-  blob((.42+Math.cos(t)*.10)*w, (.36+Math.sin(t)*.08)*h, .72*w*(1+.05*Math.sin(t)), [120,130,200], .85);
-  blob((.62+Math.cos(t*1+2.6)*.09)*w, (.62+Math.sin(t*2+2.6)*.10)*h, .65*w, [70,50,120], .7);
-  blob((.35+Math.cos(t*2+4.4)*.08)*w, (.72+Math.sin(t+4.4)*.07)*h, .55*w, [30,70,90], .6);
-  /* orb */
-  const ox = w*.5, oy = h*.52, orr = w*.23*(1+.05*Math.sin(t*2));
-  const og = ctx.createRadialGradient(ox-orr*.3,oy-orr*.3,orr*.1,ox,oy,orr);
-  og.addColorStop(0,'rgba(240,242,255,.95)');
-  og.addColorStop(.55,'rgba(150,160,230,.5)');
-  og.addColorStop(1,'rgba(80,90,170,0)');
-  ctx.fillStyle = og; ctx.beginPath(); ctx.arc(ox,oy,orr,0,TAU); ctx.fill();
-  ctx.globalCompositeOperation = 'source-over';
-  vignette(w,h,.4); addGrain(w,h);
+  ctx.fillStyle='#080810'; ctx.fillRect(0,0,w,h);
+  ctx.globalCompositeOperation='lighter';
+  radial((.42+Math.cos(t)*.10)*w,(.36+Math.sin(t)*.08)*h,.75*w,[[0,rgba([120,130,210],.8)],[1,rgba([120,130,210],0)]]);
+  radial((.62+Math.cos(t+2.6)*.09)*w,(.62+Math.sin(t*2+2.6)*.10)*h,.6*w,[[0,rgba([80,55,150],.7)],[1,rgba([80,55,150],0)]]);
+  radial((.35+Math.cos(t*2+4.4)*.08)*w,(.72+Math.sin(t+4.4)*.07)*h,.5*w,[[0,rgba([30,90,110],.6)],[1,rgba([30,90,110],0)]]);
+  const ox=w*.5, oy=h*.5, r=w*.15*(1+.06*Math.sin(t*2));
+  // prstence
+  ctx.strokeStyle='rgba(160,185,255,0.25)'; ctx.lineWidth=1.5;
+  for (let k=0;k<3;k++){
+    ctx.save(); ctx.translate(ox,oy); ctx.rotate(t*(k+1)*0.3 + k);
+    ctx.scale(1, 0.34);
+    ctx.beginPath(); ctx.arc(0,0,r*(1.4+k*0.35),0,TAU); ctx.stroke();
+    ctx.restore();
+  }
+  // orb
+  radial(ox,oy,r*2.4,[[0,'rgba(180,195,255,0.5)'],[1,'rgba(120,140,230,0)']]);
+  const og=ctx.createRadialGradient(ox-r*.3,oy-r*.3,r*.1,ox,oy,r);
+  og.addColorStop(0,'rgba(245,247,255,0.98)'); og.addColorStop(.5,'rgba(160,175,240,0.6)'); og.addColorStop(1,'rgba(90,100,190,0)');
+  ctx.fillStyle=og; ctx.beginPath(); ctx.arc(ox,oy,r,0,TAU); ctx.fill();
+  ctx.globalCompositeOperation='source-over';
+  vignette(w,h,.45); addGrain(w,h,0.5);
 }
 
-/* ---------- WORK 1: síť datových uzlů (modrá) ---------- */
+/* ============================================================
+   WORK 1 — síť datových uzlů (modrá) + záře
+   ============================================================ */
+const W1 = (() => { const rnd=mulberry(7); const p=[]; for(let i=0;i<28;i++) p.push({bx:rnd(),by:rnd(),ph:rnd()*TAU,amp:12+rnd()*24,f:rnd()<.5?1:2}); return p; })();
 function work1(t,w,h){
-  ctx.fillStyle = '#070b14'; ctx.fillRect(0,0,w,h);
-  ctx.globalCompositeOperation = 'lighter';
-  blob(w*.3,h*.25,w*.7,[27,42,74],.8);
-  blob(w*.75,h*.8,w*.6,[16,28,58],.7);
-  const rnd = mulberry(7);
-  const N = 26; const pts = [];
-  for (let i=0;i<N;i++){
-    const bx = rnd()*w, by = rnd()*h, ph = rnd()*TAU, amp = 14+rnd()*22, f = rnd()<.5?1:2;
-    pts.push({ x: bx + Math.cos(t*f+ph)*amp, y: by + Math.sin(t*f+ph*1.7)*amp, ph });
+  const bg=ctx.createLinearGradient(0,0,w,h); bg.addColorStop(0,'#070d1a'); bg.addColorStop(1,'#04070f');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,w,h);
+  ctx.globalCompositeOperation='lighter';
+  radial(w*.3,h*.25,w*.7,[[0,rgba([27,45,82],.85)],[1,rgba([27,45,82],0)]]);
+  radial(w*.78,h*.82,w*.6,[[0,rgba([18,32,66],.7)],[1,rgba([18,32,66],0)]]);
+  const pts=W1.map(o=>({x:o.bx*w+Math.cos(t*o.f+o.ph)*o.amp, y:o.by*h+Math.sin(t*o.f+o.ph*1.7)*o.amp, ph:o.ph}));
+  ctx.lineWidth=1;
+  const max=(w*.17)*(w*.17);
+  for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){
+    const dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d2=dx*dx+dy*dy;
+    if(d2<max){ const a=(1-d2/max)*.3; ctx.strokeStyle='rgba(120,165,255,'+a+')'; ctx.beginPath(); ctx.moveTo(pts[i].x,pts[i].y); ctx.lineTo(pts[j].x,pts[j].y); ctx.stroke(); }
   }
-  ctx.lineWidth = 1;
-  for (let i=0;i<N;i++) for (let j=i+1;j<N;j++){
-    const dx = pts[i].x-pts[j].x, dy = pts[i].y-pts[j].y;
-    const d2 = dx*dx+dy*dy, max = (w*.16)*(w*.16);
-    if (d2 < max){
-      const a = (1-d2/max)*.28;
-      ctx.strokeStyle = 'rgba(120,160,255,'+a+')';
-      ctx.beginPath(); ctx.moveTo(pts[i].x,pts[i].y); ctx.lineTo(pts[j].x,pts[j].y); ctx.stroke();
-    }
+  for(const pt of pts){ const tw=.5+.5*Math.sin(t*2+pt.ph*3);
+    radial(pt.x,pt.y,10+8*tw,[[0,'rgba(150,190,255,'+(0.35*tw)+')'],[1,'rgba(150,190,255,0)']]);
+    ctx.fillStyle='rgba(200,220,255,'+(.4+.55*tw)+')'; ctx.beginPath(); ctx.arc(pt.x,pt.y,1.6+1.6*tw,0,TAU); ctx.fill();
   }
-  for (const p of pts){
-    const tw = .5+.5*Math.sin(t*2+p.ph*3);
-    ctx.fillStyle = 'rgba(170,200,255,'+(.35+.55*tw)+')';
-    ctx.beginPath(); ctx.arc(p.x,p.y,1.6+1.6*tw,0,TAU); ctx.fill();
-  }
-  ctx.globalCompositeOperation = 'source-over';
-  vignette(w,h,.5); addGrain(w,h);
+  ctx.globalCompositeOperation='source-over'; vignette(w,h,.55); addGrain(w,h,0.45);
 }
 
-/* ---------- WORK 2: vlnící se linie (fialová) ---------- */
+/* ============================================================
+   WORK 2 — vlnící se datové linie (fialová) + záře
+   ============================================================ */
 function work2(t,w,h){
-  ctx.fillStyle = '#0d0916'; ctx.fillRect(0,0,w,h);
-  ctx.globalCompositeOperation = 'lighter';
-  blob(w*.7,h*.25,w*.65,[42,30,70],.85);
-  blob(w*.2,h*.75,w*.6,[30,18,52],.75);
-  for (let k=0;k<9;k++){
-    const yBase = h*(.12+k*.095);
-    const amp = 16 + k*4;
-    const g = ctx.createLinearGradient(0,0,w,0);
-    g.addColorStop(0,'rgba(170,130,255,0)');
-    g.addColorStop(.5,'rgba(170,130,255,'+(.10+.05*Math.sin(t+k))+')');
-    g.addColorStop(1,'rgba(170,130,255,0)');
-    ctx.strokeStyle = g; ctx.lineWidth = 1.4;
-    ctx.beginPath();
-    for (let x=0;x<=w;x+=12){
-      const y = yBase + Math.sin(x/w*TAU*2 + t*(k%2?1:2) + k*.8)*amp
-                      + Math.sin(x/w*TAU + t + k)*amp*.4;
-      x===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
-    }
+  const bg=ctx.createLinearGradient(0,0,w,h); bg.addColorStop(0,'#0f0a1a'); bg.addColorStop(1,'#070510');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,w,h);
+  ctx.globalCompositeOperation='lighter';
+  radial(w*.7,h*.25,w*.65,[[0,rgba([48,32,80],.85)],[1,rgba([48,32,80],0)]]);
+  radial(w*.2,h*.78,w*.6,[[0,rgba([32,20,58],.75)],[1,rgba([32,20,58],0)]]);
+  for(let k=0;k<10;k++){
+    const yBase=h*(.10+k*.088), amp=16+k*4;
+    const g=ctx.createLinearGradient(0,0,w,0);
+    const glow=.10+.06*Math.sin(t+k);
+    g.addColorStop(0,'rgba(180,140,255,0)'); g.addColorStop(.5,'rgba(180,140,255,'+glow+')'); g.addColorStop(1,'rgba(180,140,255,0)');
+    ctx.strokeStyle=g; ctx.lineWidth=1.5; ctx.beginPath();
+    for(let x=0;x<=w;x+=10){ const y=yBase+Math.sin(x/w*TAU*2+t*(k%2?1:2)+k*.8)*amp+Math.sin(x/w*TAU+t+k)*amp*.4; x===0?ctx.moveTo(x,y):ctx.lineTo(x,y); }
     ctx.stroke();
   }
-  ctx.globalCompositeOperation = 'source-over';
-  vignette(w,h,.5); addGrain(w,h);
-}
-
-/* ---------- WORK 3: pulzující mřížka (teal) ---------- */
-function work3(t,w,h){
-  ctx.fillStyle = '#07141a'; ctx.fillRect(0,0,w,h);
-  ctx.globalCompositeOperation = 'lighter';
-  blob(w*.5,h*.3,w*.7,[18,51,52],.85);
-  blob(w*.8,h*.85,w*.5,[10,36,42],.7);
-  const step = Math.max(44, w/22);
-  for (let gy=step/2; gy<h; gy+=step){
-    for (let gx=step/2; gx<w; gx+=step){
-      const wave = Math.sin(t*2 + (gx+gy)/(w*.25));
-      const a = .10 + .22*(0.5+0.5*wave);
-      const r = 1.2 + 2.2*(0.5+0.5*wave);
-      ctx.fillStyle = 'rgba(120,220,210,'+a+')';
-      ctx.beginPath(); ctx.arc(gx,gy,r,0,TAU); ctx.fill();
-      if (wave > .55){
-        ctx.strokeStyle = 'rgba(120,220,210,'+((wave-.55)*.35)+')';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(gx-step/2,gy-step/2,step,step);
-      }
-    }
+  // putující světelné body po linkách
+  for(let k=0;k<10;k+=2){ const yBase=h*(.10+k*.088), amp=16+k*4;
+    const px=((t/TAU + k*0.13)%1)*w; const py=yBase+Math.sin(px/w*TAU*2+t*(k%2?1:2)+k*.8)*amp;
+    radial(px,py,14,[[0,'rgba(210,180,255,0.6)'],[1,'rgba(210,180,255,0)']]);
   }
-  ctx.globalCompositeOperation = 'source-over';
-  vignette(w,h,.5); addGrain(w,h);
+  ctx.globalCompositeOperation='source-over'; vignette(w,h,.55); addGrain(w,h,0.45);
 }
 
-const SCENES = { hero: hero, avatar: avatar, work1: work1, work2: work2, work3: work3 };
-
-function renderAt(ms){
-  const t = ((ms % PERIOD) / PERIOD) * TAU;
-  (SCENES[MODE] || hero)(t, c.width, c.height);
+/* ============================================================
+   WORK 3 — pulzující tech mřížka (teal) + záře
+   ============================================================ */
+function work3(t,w,h){
+  const bg=ctx.createLinearGradient(0,0,w,h); bg.addColorStop(0,'#07151a'); bg.addColorStop(1,'#040c10');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,w,h);
+  ctx.globalCompositeOperation='lighter';
+  radial(w*.5,h*.3,w*.7,[[0,rgba([18,54,56],.85)],[1,rgba([18,54,56],0)]]);
+  radial(w*.82,h*.85,w*.5,[[0,rgba([10,38,44],.7)],[1,rgba([10,38,44],0)]]);
+  const step=Math.max(46,w/20);
+  for(let gy=step/2;gy<h;gy+=step)for(let gx=step/2;gx<w;gx+=step){
+    const wave=Math.sin(t*2+(gx+gy)/(w*.22));
+    const a=.10+.24*(0.5+0.5*wave), r=1.2+2.6*(0.5+0.5*wave);
+    if(wave>.4){ radial(gx,gy,r*5,[[0,'rgba(110,225,215,'+((wave-.4)*.3)+')'],[1,'rgba(110,225,215,0)']]); }
+    ctx.fillStyle='rgba(120,225,215,'+a+')'; ctx.beginPath(); ctx.arc(gx,gy,r,0,TAU); ctx.fill();
+    if(wave>.6){ ctx.strokeStyle='rgba(120,225,215,'+((wave-.6)*.35)+')'; ctx.lineWidth=1; ctx.strokeRect(gx-step/2,gy-step/2,step,step); }
+  }
+  ctx.globalCompositeOperation='source-over'; vignette(w,h,.55); addGrain(w,h,0.45);
 }
+
+const SCENES = { hero, avatar, work1, work2, work3 };
+function renderAt(ms){ const t=((ms%PERIOD)/PERIOD)*TAU; (SCENES[MODE]||hero)(t,c.width,c.height); }
 window.renderAt = renderAt;
 window.getFramePng = () => c.toDataURL('image/png').split(',')[1];
-
-if (!params.get('step')) {
-  (function loop(now){ renderAt(now); requestAnimationFrame(loop); })(0);
-}
+if (!params.get('step')) (function loop(now){ renderAt(now); requestAnimationFrame(loop); })(0);
 </script>
 </body>
 </html>
