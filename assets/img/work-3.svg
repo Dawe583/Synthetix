@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1100" viewBox="0 0 900 1100" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="a2" cx="59%" cy="78%" r="80%">
+      <stop offset="0%" stop-color="#123334"/>
+      <stop offset="55%" stop-color="#08151a"/>
+      <stop offset="100%" stop-color="#050508"/>
+    </radialGradient>
+    <radialGradient id="b2" cx="44%" cy="29%" r="55%">
+      <stop offset="0%" stop-color="#123334" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#123334" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="n2"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.05"/></feComponentTransfer>
+      <feComposite operator="over" in2="SourceGraphic"/></filter>
+  </defs>
+  <rect width="900" height="1100" fill="url(#a2)"/>
+  <rect width="900" height="1100" fill="url(#b2)"/>
+  <path d="M-20 187 C 270 147, 630 227, 920 187" stroke="rgba(255,255,255,0.04)" fill="none" stroke-width="1"/><path d="M-20 272 C 270 232, 630 312, 920 272" stroke="rgba(255,255,255,0.04)" fill="none" stroke-width="1"/><path d="M-20 361 C 270 321, 630 401, 920 361" stroke="rgba(255,255,255,0.04)" fill="none" stroke-width="1"/><path d="M-20 516 C 270 476, 630 556, 920 516" stroke="rgba(255,255,255,0.04)" fill="none" stroke-width="1"/><path d="M-20 714 C 270 674, 630 754, 920 714" stroke="rgba(255,255,255,0.04)" fill="none" stroke-width="1"/><path d="M-20 878 C 270 838, 630 918, 920 878" stroke="rgba(255,255,255,0.04)" fill="none" stroke-width="1"/><path d="M-20 975 C 270 935, 630 1015, 920 975" stroke="rgba(255,255,255,0.04)" fill="none" stroke-width="1"/>
+  <circle cx="106" cy="182" r="0.6" fill="rgba(255,255,255,0.06)"/><circle cx="243" cy="401" r="1.1" fill="rgba(255,255,255,0.06)"/><circle cx="380" cy="620" r="1.6" fill="rgba(255,255,255,0.06)"/><circle cx="517" cy="839" r="0.6" fill="rgba(255,255,255,0.06)"/><circle cx="654" cy="1058" r="1.1" fill="rgba(255,255,255,0.06)"/><circle cx="791" cy="177" r="1.6" fill="rgba(255,255,255,0.06)"/><circle cx="28" cy="396" r="0.6" fill="rgba(255,255,255,0.06)"/><circle cx="165" cy="615" r="1.1" fill="rgba(255,255,255,0.06)"/><circle cx="302" cy="834" r="1.6" fill="rgba(255,255,255,0.06)"/><circle cx="439" cy="1053" r="0.6" fill="rgba(255,255,255,0.06)"/><circle cx="576" cy="172" r="1.1" fill="rgba(255,255,255,0.06)"/><circle cx="713" cy="391" r="1.6" fill="rgba(255,255,255,0.06)"/><circle cx="850" cy="610" r="0.6" fill="rgba(255,255,255,0.06)"/><circle cx="87" cy="829" r="1.1" fill="rgba(255,255,255,0.06)"/><circle cx="224" cy="1048" r="1.6" fill="rgba(255,255,255,0.06)"/><circle cx="361" cy="167" r="0.6" fill="rgba(255,255,255,0.06)"/><circle cx="498" cy="386" r="1.1" fill="rgba(255,255,255,0.06)"/><circle cx="635" cy="605" r="1.6" fill="rgba(255,255,255,0.06)"/><circle cx="772" cy="824" r="0.6" fill="rgba(255,255,255,0.06)"/><circle cx="9" cy="1043" r="1.1" fill="rgba(255,255,255,0.06)"/><circle cx="146" cy="162" r="1.6" fill="rgba(255,255,255,0.06)"/><circle cx="283" cy="381" r="0.6" fill="rgba(255,255,255,0.06)"/><circle cx="420" cy="600" r="1.1" fill="rgba(255,255,255,0.06)"/><circle cx="557" cy="819" r="1.6" fill="rgba(255,255,255,0.06)"/><circle cx="694" cy="1038" r="0.6" fill="rgba(255,255,255,0.06)"/><circle cx="831" cy="157" r="1.1" fill="rgba(255,255,255,0.06)"/>
+  <rect width="900" height="1100" filter="url(#n2)" opacity="0.5"/>
+  <rect width="900" height="1100" fill="none"/>
+</svg>
