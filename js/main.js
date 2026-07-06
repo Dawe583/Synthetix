@@ -213,9 +213,9 @@
       if (painTitle) { painTitle.style.opacity = 1; painTitle.style.transform = 'none'; }
     }
 
-    // -- Work karty: perspektivní náklon při vjezdu + parallax obrázku --
+    // -- Work karty: perspektivní náklon při vjezdu + parallax média (obrázek i video) --
     document.querySelectorAll('.work').forEach(function (card) {
-      var img = card.querySelector('.work__media img');
+      var media = Array.prototype.slice.call(card.querySelectorAll('.work__media img, .work__media video'));
       if (reduceMotion) return;
       link(card, function (r, vh) {
         var p = clamp01((vh - r.top) / (vh * 0.65));
@@ -223,10 +223,9 @@
         var ty = (1 - p) * 60;
         card.style.transform = 'perspective(1200px) rotateX(' + rot + 'deg) translateY(' + ty + 'px)';
         card.style.opacity = 0.2 + 0.8 * p;
-        if (img) {
-          var cp = clamp01((vh - r.top) / (vh + r.height));
-          img.style.transform = 'scale(1.12) translateY(' + ((cp - 0.5) * -36) + 'px)';
-        }
+        var cp = clamp01((vh - r.top) / (vh + r.height));
+        var mt = 'scale(1.12) translateY(' + ((cp - 0.5) * -36) + 'px)';
+        for (var i = 0; i < media.length; i++) media[i].style.transform = mt;
       });
     });
 
