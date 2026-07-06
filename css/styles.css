@@ -808,13 +808,9 @@ html.js .reveal.in { opacity: 1; transform: none; }
   .numbers { grid-template-columns: 1fr; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  * { animation: none !important; transition: none !important; }
-  .reveal { opacity: 1; transform: none; }
-}
-
 /* ============================================================
    ANIMACE 2.0 — 1:1 podle šablony (Lenis, letter-reveal, parallax)
+   Animace běží vždy a všude — žádné systémové omezení je nevypíná.
    ============================================================ */
 
 /* ---- Hero video (WebM) nad CSS fallbackem ---- */
@@ -892,22 +888,6 @@ html.js .service { will-change: transform, opacity; }
   .pill--4 { left: 6%; }
   .pill--5 { right: 6%; }
   .pill h5 { font-size: 13px; }
-}
-
-/* ---- Omezený pohyb: vše viditelné, bez animací ---- */
-@media (prefers-reduced-motion: reduce) {
-  html.js .reveal, html.js .pill, html.js .pain__title,
-  html.js [data-split] .ch,
-  html.js .hero__bg, html.js .hero__services p,
-  html.js .hero .eyebrow, html.js .hero .contact-card {
-    opacity: 1 !important;
-    transform: none !important;
-    transition: none !important;
-  }
-  .pain { height: auto; padding: 140px 0; }
-  .pain__sticky { position: static; height: auto; }
-  .pain__cards { position: relative; height: 340px; }
-  .hero__video { display: none; }
 }
 
 /* ---- Nouzový režim (fatální chyba JS): vše viditelné ---- */

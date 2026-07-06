@@ -16,14 +16,12 @@
       if (window.console && console.warn) console.warn('[synthetix]', name, e);
     }
   }
-  window.addEventListener('error', function () {
-    docEl.classList.add('no-anim'); // nouzový režim: vše viditelné
-  });
 
+  /* Animace běží VŽDY — žádné systémové nastavení (omezený pohyb,
+     úsporný režim) je nevypíná. */
   var reduceMotion = false;
-  safe('reduceMotion', function () {
-    reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  });
+
+  if (window.console && console.info) console.info('[synthetix] v4 — animační engine aktivní');
 
   /* ============================================
      1) LENIS SMOOTH SCROLL — desktop i dotyk
