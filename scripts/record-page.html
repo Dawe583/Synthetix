@@ -54,8 +54,8 @@ function makeGrain(){
 }
 grain = makeGrain();
 
-function frame(now){
-  const t = ((now % PERIOD) / PERIOD) * Math.PI * 2; // 0..2π periodicky
+function renderAt(ms){
+  const t = ((ms % PERIOD) / PERIOD) * Math.PI * 2; // 0..2π periodicky
   const w = c.width, h = c.height;
   ctx.globalCompositeOperation = 'source-over';
   ctx.fillStyle = '#050508';
@@ -81,9 +81,15 @@ function frame(now){
   ctx.globalAlpha = 0.5;
   for (let gy=0; gy<h; gy+=160) for (let gxp=0; gxp<w; gxp+=160) ctx.drawImage(grain,gxp,gy);
   ctx.restore();
-  requestAnimationFrame(frame);
 }
-requestAnimationFrame(frame);
+
+// deterministický režim (?step=1): snímky řídí externí skript přes window.renderAt
+window.renderAt = renderAt;
+window.getFramePng = () => c.toDataURL('image/png').split(',')[1];
+
+if (!params.get('step')) {
+  (function loop(now){ renderAt(now); requestAnimationFrame(loop); })(0);
+}
 </script>
 </body>
 </html>

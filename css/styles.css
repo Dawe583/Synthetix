@@ -909,3 +909,13 @@ html.js .service { will-change: transform, opacity; }
   .pain__cards { position: relative; height: 340px; }
   .hero__video { display: none; }
 }
+
+/* ---- Nouzový režim (fatální chyba JS): vše viditelné ---- */
+html.no-anim .reveal, html.no-anim .pill, html.no-anim .pain__title,
+html.no-anim [data-split] .ch, html.no-anim .hero__bg,
+html.no-anim .hero__services p, html.no-anim .hero .eyebrow,
+html.no-anim .hero .contact-card,
+html.no-anim .work, html.no-anim .service, html.no-anim .step {
+  opacity: 1 !important;
+  transform: none !important;
+}
