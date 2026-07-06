@@ -1,65 +1,290 @@
 /* ============================================================
-   Synthetix — interakce
+   Synthetix — animační engine (1:1 podle šablony)
+   Lenis smooth scroll · letter-reveal · sticky pain-point ·
+   parallax · scroll-linked karty · widgety
    ============================================================ */
 (function () {
   'use strict';
 
-  /* ---- Nav: přidání pozadí po scrollu ---- */
+  var docEl = document.documentElement;
+  docEl.classList.add('js');
+
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ============================================
+     1) LENIS SMOOTH SCROLL
+     ============================================ */
+  var lenis = null;
+  if (!reduceMotion && typeof Lenis !== 'undefined') {
+    // vypnout nativní smooth (koliduje s Lenis)
+    docEl.style.scrollBehavior = 'auto';
+    lenis = new Lenis({
+      autoRaf: true,
+      anchors: { offset: -80 },
+      lerp: 0.1,
+      wheelMultiplier: 1,
+      smoothWheel: true
+    });
+  }
+
+  /* ============================================
+     2) NAV — pozadí po scrollu
+     ============================================ */
   var nav = document.getElementById('nav');
-  function onScroll() {
+  function navState() {
     if (window.scrollY > 20) nav.classList.add('scrolled');
     else nav.classList.remove('scrolled');
   }
-  window.addEventListener('scroll', onScroll, { passive: true });
-  onScroll();
+  window.addEventListener('scroll', navState, { passive: true });
+  navState();
 
-  /* ---- Reveal animace při scrollu ---- */
-  var revealEls = document.querySelectorAll('.reveal');
-  var painSection = document.getElementById('pain');
+  /* ============================================
+     3) LETTER-SPLIT — rozdělení nadpisů na písmena
+        (jako per-písmenkové spany ve Framer šabloně)
+     ============================================ */
+  function splitLetters(el, stagger) {
+    if (el.dataset.splitDone) return;
+    el.dataset.splitDone = '1';
+    el.setAttribute('data-split', '');
+    var charIndex = 0;
+    var nodes = Array.prototype.slice.call(el.childNodes);
+    nodes.forEach(function (node) {
+      if (node.nodeType === 3) {
+        var frag = document.createDocumentFragment();
+        var words = node.textContent.split(/(\s+)/);
+        words.forEach(function (word) {
+          if (!word) return;
+          if (/^\s+$/.test(word)) { frag.appendChild(document.createTextNode(' ')); return; }
+          var w = document.createElement('span');
+          w.className = 'w';
+          for (var i = 0; i < word.length; i++) {
+            var ch = document.createElement('span');
+            ch.className = 'ch';
+            ch.textContent = word[i];
+            ch.style.setProperty('--d', (charIndex * stagger) + 'ms');
+            charIndex++;
+            w.appendChild(ch);
+          }
+          frag.appendChild(w);
+        });
+        el.replaceChild(frag, node);
+      }
+      // elementy (<br>) zůstávají beze změny
+    });
+  }
 
+  var splitTargets = [];
+  document.querySelectorAll('h1, .head h2, .pain__title h2, .tst__head h2, .cta__inner h2, .blog__top h2').forEach(function (h) {
+    splitLetters(h, 14);
+    splitTargets.push(h);
+  });
+  var heroSub = document.querySelector('.hero__subtitle p');
+  if (heroSub) { splitLetters(heroSub, 6); splitTargets.push(heroSub); }
+
+  /* ============================================
+     4) REVEAL — IntersectionObserver
+     ============================================ */
+  var io = null;
   if ('IntersectionObserver' in window) {
-    var io = new IntersectionObserver(function (entries) {
+    io = new IntersectionObserver(function (entries) {
       entries.forEach(function (e) {
-        if (e.isIntersecting) {
-          e.target.classList.add('in');
-          io.unobserve(e.target);
-        }
+        if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
       });
     }, { threshold: 0.14, rootMargin: '0px 0px -8% 0px' });
 
-    revealEls.forEach(function (el) { io.observe(el); });
-
-    if (painSection) {
-      var painIO = new IntersectionObserver(function (entries) {
-        entries.forEach(function (e) {
-          if (e.isIntersecting) { painSection.classList.add('in'); painIO.unobserve(e.target); }
-        });
-      }, { threshold: 0.35 });
-      painIO.observe(painSection);
-    }
+    document.querySelectorAll('.reveal').forEach(function (el) { io.observe(el); });
+    splitTargets.forEach(function (el) {
+      // hero prvky se spouští sekvencí při načtení, ne observerem
+      if (el.closest('.hero')) return;
+      io.observe(el);
+    });
   } else {
-    revealEls.forEach(function (el) { el.classList.add('in'); });
-    if (painSection) painSection.classList.add('in');
+    document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('in'); });
+    splitTargets.forEach(function (el) { el.classList.add('in'); });
   }
 
-  /* ---- FAQ akordeon ---- */
+  /* ============================================
+     5) HERO — appear sekvence při načtení
+     ============================================ */
+  function heroIntro() {
+    document.body.classList.add('loaded');
+    var h1 = document.querySelector('.hero h1');
+    var sub = document.querySelector('.hero__subtitle p');
+    setTimeout(function () { if (sub) sub.classList.add('in'); }, 350);
+    setTimeout(function () { if (h1) h1.classList.add('in'); }, 650);
+  }
+  if (document.readyState === 'complete') heroIntro();
+  else window.addEventListener('load', heroIntro);
+
+  /* ============================================
+     6) VIDEA — přehrávání + fallback pro zařízení bez WebM
+     ============================================ */
+  document.querySelectorAll('video[data-webm]').forEach(function (v) {
+    var canPlay = v.canPlayType && v.canPlayType('video/webm; codecs="vp8"');
+    function fail() { v.classList.remove('playing'); v.style.display = 'none'; }
+    if (!canPlay) { fail(); return; }
+    v.addEventListener('playing', function () { v.classList.add('playing'); });
+    v.addEventListener('error', fail, true);
+    var p = v.play();
+    if (p && p.catch) p.catch(function () { /* autoplay blokován — poster/fallback zůstává */ });
+  });
+
+  /* ============================================
+     7) SCROLL-LINKED ENGINE — jediná rAF smyčka
+     ============================================ */
+  var linked = [];
+  function clamp01(x) { return Math.max(0, Math.min(1, x)); }
+  function link(el, fn) { if (el) linked.push({ el: el, fn: fn }); }
+
+  // -- Pain point: sticky, rotace kruhů, zoom, pilulky po prazích --
+  var pain = document.getElementById('pain');
+  var rings = pain ? pain.querySelector('.pain__rings') : null;
+  var painTitle = pain ? pain.querySelector('.pain__title') : null;
+  var pills = pain ? Array.prototype.slice.call(pain.querySelectorAll('.pill')) : [];
+  var pillThresholds = [0.06, 0.2, 0.34, 0.48, 0.62];
+  if (pain && !reduceMotion) {
+    link(pain, function (r, vh) {
+      var travel = r.height - vh;
+      var p = clamp01(-r.top / (travel > 0 ? travel : 1));
+      if (rings) {
+        rings.style.transform = 'translate(-50%, -50%) rotate(' + (-320 * p) + 'deg) scale(' + (0.75 + 0.45 * p) + ')';
+      }
+      pills.forEach(function (pill, i) {
+        if (p >= pillThresholds[i]) pill.classList.add('show');
+        else pill.classList.remove('show');
+      });
+      if (painTitle) {
+        var tp = clamp01((p - 0.08) * 3);
+        painTitle.style.opacity = tp;
+        painTitle.style.transform = 'scale(' + (0.92 + 0.08 * tp) + ')';
+      }
+    });
+  } else if (pain) {
+    pills.forEach(function (pill) { pill.classList.add('show'); });
+    if (painTitle) { painTitle.style.opacity = 1; painTitle.style.transform = 'none'; }
+  }
+
+  // -- Work karty: perspektivní náklon při vjezdu + parallax obrázku --
+  document.querySelectorAll('.work').forEach(function (card) {
+    var img = card.querySelector('.work__media img');
+    if (reduceMotion) return;
+    link(card, function (r, vh) {
+      var p = clamp01((vh - r.top) / (vh * 0.65));
+      var rot = (1 - p) * 9;
+      var ty = (1 - p) * 60;
+      card.style.transform = 'perspective(1200px) rotateX(' + rot + 'deg) translateY(' + ty + 'px)';
+      card.style.opacity = 0.2 + 0.8 * p;
+      if (img) {
+        var cp = clamp01((vh - r.top) / (vh + r.height)); // 0..1 průchod viewportem
+        img.style.transform = 'scale(1.12) translateY(' + ((cp - 0.5) * -36) + 'px)';
+      }
+    });
+  });
+
+  // -- Kroky (Jak to funguje): scroll-linked dorovnání offsetů --
+  var stepsWrap = document.querySelector('.steps');
+  if (stepsWrap && !reduceMotion) {
+    var steps = Array.prototype.slice.call(stepsWrap.querySelectorAll('.step'));
+    link(stepsWrap, function (r, vh) {
+      var p = clamp01((vh - r.top) / (vh * 0.8));
+      steps.forEach(function (s, i) {
+        var pi = clamp01(p * 1.5 - i * 0.18);
+        s.style.setProperty('--shift', ((1 - pi) * (70 + i * 30)) + 'px');
+        s.style.opacity = 0.15 + 0.85 * pi;
+      });
+    });
+  }
+
+  // -- Služby: slide-in zprava (pozorováno v šabloně: translateX ~66px, opacity ~0.55).
+  //    Vzdálenost slidu omezená volným místem vpravo → nikdy nerozšíří layout (mobil). --
+  document.querySelectorAll('.service').forEach(function (card) {
+    if (reduceMotion) return;
+    var maxSlide = 120;
+    function measure() {
+      var prevT = card.style.transform;
+      card.style.transform = 'none';
+      var rr = card.getBoundingClientRect();
+      var free = docEl.clientWidth - rr.right - 4;
+      maxSlide = Math.max(0, Math.min(120, free));
+      card.style.transform = prevT;
+    }
+    measure();
+    window.addEventListener('resize', measure);
+    link(card, function (r, vh) {
+      var p = clamp01((vh - r.top) / (vh * 0.6));
+      card.style.transform = 'translateX(' + ((1 - p) * maxSlide) + 'px)';
+      card.style.opacity = 0.3 + 0.7 * p;
+    });
+  });
+
+  // -- Parallax pozadí (Proč my + CTA) --
+  function parallax(imgSel, speed) {
+    var img = document.querySelector(imgSel);
+    if (!img || reduceMotion) return;
+    var wrap = img.parentElement;
+    img.style.transform = 'scale(1.18)';
+    link(wrap, function (r, vh) {
+      var center = (r.top + r.height / 2 - vh / 2) / vh;
+      center = Math.max(-1, Math.min(1, center));           // clamp — obraz nikdy neuteče z masky
+      img.style.transform = 'scale(1.18) translateY(' + (center * speed * 60) + 'px)';
+    });
+  }
+  parallax('.why__bg img', 0.8);
+  parallax('.cta__bg img', 0.6);
+
+  // -- hlavní smyčka --
+  if (linked.length && !reduceMotion) {
+    (function loop() {
+      if (!document.hidden) {
+        var vh = window.innerHeight;
+        for (var i = 0; i < linked.length; i++) {
+          var item = linked[i];
+          item.fn(item.el.getBoundingClientRect(), vh);
+        }
+      }
+      requestAnimationFrame(loop);
+    })();
+  }
+
+  /* ============================================
+     8) TLAČÍTKA — hover slide textu (duplikovaný label)
+     ============================================ */
+  document.querySelectorAll('.btn').forEach(function (btn) {
+    var textNode = null;
+    for (var i = 0; i < btn.childNodes.length; i++) {
+      var n = btn.childNodes[i];
+      if (n.nodeType === 3 && n.textContent.trim()) { textNode = n; break; }
+    }
+    if (!textNode) return;
+    var label = textNode.textContent.trim();
+    var wrap = document.createElement('span');
+    wrap.className = 'btn__label';
+    wrap.innerHTML = '<span class="btn__t1"></span><span class="btn__t2" aria-hidden="true"></span>';
+    wrap.querySelector('.btn__t1').textContent = label;
+    wrap.querySelector('.btn__t2').textContent = label;
+    btn.replaceChild(wrap, textNode);
+  });
+
+  /* ============================================
+     9) FAQ AKORDEON
+     ============================================ */
   var qas = document.querySelectorAll('.qa');
   qas.forEach(function (qa) {
-    var q = qa.querySelector('.qa__q');
-    q.addEventListener('click', function () {
+    qa.querySelector('.qa__q').addEventListener('click', function () {
       var isOpen = qa.classList.contains('open');
       qas.forEach(function (o) { o.classList.remove('open'); });
       if (!isOpen) qa.classList.add('open');
     });
   });
 
-  /* ---- Reference slider ---- */
+  /* ============================================
+     10) REFERENCE SLIDER
+     ============================================ */
   var track = document.getElementById('tstTrack');
   var prev = document.getElementById('tstPrev');
   var next = document.getElementById('tstNext');
   if (track && prev && next) {
-    var index = 0;
-    var total = track.children.length;
+    var index = 0, total = track.children.length;
     function render() { track.style.transform = 'translateX(' + (-index * 100) + '%)'; }
     prev.addEventListener('click', function () { index = (index - 1 + total) % total; render(); });
     next.addEventListener('click', function () { index = (index + 1) % total; render(); });
@@ -67,7 +292,9 @@
     track.parentElement.addEventListener('mouseenter', function () { clearInterval(auto); });
   }
 
-  /* ---- Přepínač ceníku (měsíčně / ročně) ---- */
+  /* ============================================
+     11) CENÍK — přepínač s blur crossfade
+     ============================================ */
   var sw = document.getElementById('switch');
   if (sw) {
     var buttons = sw.querySelectorAll('button');
@@ -78,21 +305,21 @@
       thumb.style.width = btn.offsetWidth + 'px';
       thumb.style.transform = 'translateX(' + (btn.offsetLeft - 4) + 'px)';
     }
-
     function setMode(mode, btn) {
       buttons.forEach(function (b) { b.classList.remove('active'); });
       btn.classList.add('active');
       positionThumb(btn);
       amounts.forEach(function (a) {
-        a.textContent = mode === 'yearly' ? a.getAttribute('data-yearly') : a.getAttribute('data-monthly');
+        a.classList.add('swap');
+        setTimeout(function () {
+          a.textContent = mode === 'yearly' ? a.getAttribute('data-yearly') : a.getAttribute('data-monthly');
+          a.classList.remove('swap');
+        }, 280);
       });
     }
-
     buttons.forEach(function (b) {
       b.addEventListener('click', function () { setMode(b.getAttribute('data-mode'), b); });
     });
-
-    // počáteční pozice
     setTimeout(function () { positionThumb(buttons[0]); }, 60);
     window.addEventListener('resize', function () {
       var active = sw.querySelector('button.active');
@@ -100,7 +327,9 @@
     });
   }
 
-  /* ---- Počítadla čísel ---- */
+  /* ============================================
+     12) POČÍTADLA
+     ============================================ */
   var counters = document.querySelectorAll('.num__val[data-count]');
   if ('IntersectionObserver' in window && counters.length) {
     var cIO = new IntersectionObserver(function (entries) {
@@ -109,14 +338,11 @@
         var el = e.target;
         var target = parseInt(el.getAttribute('data-count'), 10);
         var numSpan = el.querySelector('span:first-child');
-        var start = 0;
-        var dur = 1100;
-        var t0 = null;
+        var dur = 1100, t0 = null;
         function step(ts) {
           if (!t0) t0 = ts;
           var p = Math.min((ts - t0) / dur, 1);
-          var eased = 1 - Math.pow(1 - p, 3);
-          numSpan.textContent = Math.round(start + (target - start) * eased);
+          numSpan.textContent = Math.round(target * (1 - Math.pow(1 - p, 3)));
           if (p < 1) requestAnimationFrame(step);
         }
         requestAnimationFrame(step);
@@ -126,7 +352,9 @@
     counters.forEach(function (c) { cIO.observe(c); });
   }
 
-  /* ---- Mobilní menu (jednoduché) ---- */
+  /* ============================================
+     13) MOBILNÍ MENU
+     ============================================ */
   var toggle = document.querySelector('.nav__toggle');
   var menu = document.querySelector('.nav__menu');
   if (toggle && menu) {

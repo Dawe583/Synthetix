@@ -8,8 +8,9 @@
   <meta property="og:title" content="Synthetix — AI automatizace pro vaši firmu">
   <meta property="og:description" content="Navrhujeme automatizaci, která přináší jasnost, přesnost a efektivitu do fungování vaší firmy.">
   <meta property="og:type" content="website">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+  <link rel="preload" href="assets/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="js/vendor/lenis.css">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -47,6 +48,9 @@
     <!-- ============ HERO ============ -->
     <section class="hero">
       <div class="hero__bg hero__bg--anim">
+        <video class="hero__video" data-webm autoplay loop muted playsinline preload="auto" aria-hidden="true">
+          <source src="assets/video/hero-bg.webm" type="video/webm">
+        </video>
         <div class="hero__overlay"></div>
       </div>
       <div class="hero__content container">
@@ -67,7 +71,9 @@
           </div>
           <div class="contact-card" id="contact">
             <div class="contact-card__avatar">
-              <img src="assets/img/avatar.svg" alt="Klára — ředitelka Synthetix">
+              <video data-webm autoplay loop muted playsinline poster="assets/img/avatar.svg" aria-label="Klára — ředitelka Synthetix">
+                <source src="assets/video/avatar.webm" type="video/webm">
+              </video>
             </div>
             <div class="contact-card__body">
               <h5>Promluvte si s Klárou</h5>
@@ -99,14 +105,14 @@
     </section>
 
     <!-- ============ PAIN POINT ============ -->
-    <section class="pain reveal-trigger" id="pain">
-      <div class="pain__rings">
-        <span class="ring-s"></span>
-        <span class="ring-m"></span>
-        <span class="ring-l"></span>
-        <span class="ring-xl"></span>
-      </div>
-      <div class="container">
+    <section class="pain" id="pain">
+      <div class="pain__sticky">
+        <div class="pain__rings">
+          <span class="ring-s"></span>
+          <span class="ring-m"></span>
+          <span class="ring-l"></span>
+          <span class="ring-xl"></span>
+        </div>
         <div class="pain__cards">
           <div class="pill pill--1"><span class="dot"></span><h5>Nedostatek přehledu</h5></div>
           <div class="pill pill--2"><span class="dot"></span><h5>Zdlouhavý onboarding</h5></div>
@@ -615,7 +621,9 @@
             </div>
             <div class="contact-card">
               <div class="contact-card__avatar">
-                <img src="assets/img/avatar.svg" alt="Klára — ředitelka Synthetix">
+                <video data-webm autoplay loop muted playsinline poster="assets/img/avatar.svg" aria-label="Klára — ředitelka Synthetix">
+                <source src="assets/video/avatar.webm" type="video/webm">
+              </video>
               </div>
               <div class="contact-card__body">
                 <h5>Promluvte si s Klárou</h5>
@@ -719,6 +727,7 @@
     </div>
   </footer>
 
+  <script src="js/vendor/lenis.min.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

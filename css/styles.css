@@ -3,7 +3,21 @@
    Design systém (tmavý motiv, inspirace šablonou Sanjaya)
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap');
+/* Self-hostované variabilní fonty Geist (OFL) — žádná externí závislost */
+@font-face {
+  font-family: 'Geist';
+  src: url('../assets/fonts/Geist-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('../assets/fonts/GeistMono-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
 
 /* ---------- Tokeny ---------- */
 :root {
@@ -46,6 +60,9 @@ body {
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
+
+/* clip nevytváří scroll container → position:sticky uvnitř funguje dál */
+main { overflow-x: clip; }
 
 img { max-width: 100%; display: block; }
 a { color: inherit; text-decoration: none; }
@@ -325,12 +342,21 @@ p { margin: 0; }
 .logo-cell img { max-height: 34px; width: auto; object-fit: contain; opacity: .85; }
 
 /* ============================================================
-   PAIN POINT
+   PAIN POINT (sticky + scroll-driven)
    ============================================================ */
 .pain {
   position: relative;
-  padding: 160px 0;
+  height: 260vh;                 /* scrollovací dráha pro sticky animaci */
   text-align: center;
+}
+.pain__sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
 }
 .pain__rings {
@@ -339,6 +365,7 @@ p { margin: 0; }
   transform: translate(-50%, -50%);
   z-index: 0;
   pointer-events: none;
+  will-change: transform;
 }
 .pain__rings span {
   position: absolute;
@@ -353,10 +380,10 @@ p { margin: 0; }
 .ring-xl { width: 1100px; height: 1100px; border-color: rgba(255,255,255,.05); }
 
 .pain__cards {
-  position: relative;
+  position: absolute;
+  inset: 0;
   z-index: 1;
-  height: 360px;
-  margin-bottom: 30px;
+  pointer-events: none;
 }
 .pill {
   position: absolute;
@@ -368,26 +395,28 @@ p { margin: 0; }
   border-radius: var(--radius);
   background: var(--bg-card);
   white-space: nowrap;
-  opacity: 0;
-  transform: translateY(24px) scale(.85);
-  transition: opacity .7s ease, transform .7s cubic-bezier(.2,.7,.3,1);
 }
 .pill .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--bg-dot); }
 .pill h5 { font-size: 15px; font-weight: 500; }
-.pain.in .pill { opacity: 1; transform: translateY(0) scale(1); }
-.pain.in .pill:nth-child(2) { transition-delay: .08s; }
-.pain.in .pill:nth-child(3) { transition-delay: .16s; }
-.pain.in .pill:nth-child(4) { transition-delay: .24s; }
-.pain.in .pill:nth-child(5) { transition-delay: .32s; }
 
-.pill--1 { top: 6%;  left: 50%; transform: translate(-50%, 24px) scale(.85); }
-.pain.in .pill--1 { transform: translate(-50%, 0) scale(1); }
-.pill--2 { top: 34%; left: 12%; }
-.pill--3 { top: 30%; right: 10%; }
-.pill--4 { bottom: 22%; left: 20%; }
-.pill--5 { bottom: 10%; right: 20%; }
+/* skryté výchozí stavy jen s JS (bez JS je vše viditelné) */
+html.js .pill {
+  opacity: 0;
+  transform: translateY(24px) scale(.5);
+  transition: opacity .7s ease, transform .7s cubic-bezier(.2,.7,.3,1);
+}
+.pill.show { opacity: 1 !important; transform: none !important; }
+
+.pill--1 { top: 14%; left: 50%; transform: translateX(-50%); }
+html.js .pill--1 { transform: translate(-50%, 24px) scale(.5); }
+.pill--1.show { transform: translateX(-50%) !important; }
+.pill--2 { top: 30%; left: 12%; }
+.pill--3 { top: 28%; right: 10%; }
+.pill--4 { bottom: 26%; left: 20%; }
+.pill--5 { bottom: 16%; right: 20%; }
 
 .pain__title { position: relative; z-index: 2; }
+html.js .pain__title { opacity: 0; transform: scale(.92); will-change: transform, opacity; }
 
 /* ============================================================
    SEKČNÍ HLAVIČKY
@@ -443,8 +472,9 @@ p { margin: 0; }
   overflow: hidden;
   background: var(--bg-card);
 }
-.step:nth-child(2) { transform: translateY(30px); }
-.step:nth-child(3) { transform: translateY(60px); }
+.step { --base: 0px; --shift: 0px; transform: translateY(calc(var(--base) + var(--shift))); will-change: transform; }
+.step:nth-child(2) { --base: 30px; }
+.step:nth-child(3) { --base: 60px; }
 .step__img { aspect-ratio: 1.04 / 1; overflow: hidden; }
 .step__img img { width: 100%; height: 100%; object-fit: cover; }
 .step__text { padding: 26px; }
@@ -728,10 +758,10 @@ p { margin: 0; }
 .footer__socials a:hover { color: var(--white); }
 
 /* ============================================================
-   REVEAL animace
+   REVEAL animace (skryté výchozí stavy jen s JS)
    ============================================================ */
-.reveal { opacity: 0; transform: translateY(28px); transition: opacity .7s ease, transform .7s cubic-bezier(.2,.7,.3,1); }
-.reveal.in { opacity: 1; transform: none; }
+html.js .reveal { opacity: 0; transform: translateY(28px); transition: opacity .7s ease, transform .7s cubic-bezier(.2,.7,.3,1); }
+html.js .reveal.in { opacity: 1; transform: none; }
 
 /* ============================================================
    RESPONSIVE
@@ -769,6 +799,8 @@ p { margin: 0; }
 }
 
 @media (max-width: 560px) {
+  .nav__cta .btn { height: 40px; padding: 0 14px; font-size: 13px; }
+  .brand { font-size: 17px; }
   .logos__grid { grid-template-columns: repeat(2, 1fr); }
   .trow { grid-template-columns: 1fr; }
   .tcell { border-right: 0; }
@@ -779,4 +811,101 @@ p { margin: 0; }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
   .reveal { opacity: 1; transform: none; }
+}
+
+/* ============================================================
+   ANIMACE 2.0 — 1:1 podle šablony (Lenis, letter-reveal, parallax)
+   ============================================================ */
+
+/* ---- Hero video (WebM) nad CSS fallbackem ---- */
+.hero__video {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+.hero__video.playing { opacity: 1; }
+.hero__overlay { z-index: 2; }
+.hero__video { z-index: 1; }
+.hero__bg--anim::before, .hero__bg--anim::after { z-index: 0; }
+
+/* ---- Avatar video ---- */
+.contact-card__avatar video { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* ---- Per-písmenkový reveal (jako Framer šablona) ---- */
+[data-split] .w { white-space: nowrap; display: inline-block; }
+html.js [data-split] .ch {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.9em);
+  will-change: transform, opacity;
+  transition: opacity .55s ease, transform .65s cubic-bezier(.2,.65,.3,1);
+  transition-delay: var(--d, 0s);
+}
+html.js [data-split].in .ch { opacity: 1; transform: none; }
+
+/* ---- Hero appear sekvence (při načtení) ---- */
+html.js .hero__bg { opacity: 0; transition: opacity 1s ease .1s; }
+html.js body.loaded .hero__bg { opacity: 1; }
+html.js .hero__services p {
+  opacity: 0; transform: translateY(14px);
+  transition: opacity .6s ease, transform .6s cubic-bezier(.2,.65,.3,1);
+}
+html.js body.loaded .hero__services p { opacity: 1; transform: none; }
+html.js body.loaded .hero__services p:nth-child(1) { transition-delay: .25s; }
+html.js body.loaded .hero__services p:nth-child(2) { transition-delay: .35s; }
+html.js body.loaded .hero__services p:nth-child(3) { transition-delay: .45s; }
+html.js .hero .eyebrow, html.js .hero .contact-card {
+  opacity: 0; transform: translateY(18px);
+  transition: opacity .7s ease .55s, transform .7s cubic-bezier(.2,.65,.3,1) .55s;
+}
+html.js body.loaded .hero .eyebrow,
+html.js body.loaded .hero .contact-card { opacity: 1; transform: none; }
+html.js body.loaded .hero .contact-card { transition-delay: .85s; }
+
+/* ---- Tlačítka: hover slide textu (duplikovaný label) ---- */
+.btn__label { position: relative; display: inline-block; overflow: hidden; }
+.btn__t1, .btn__t2 { display: block; transition: transform .38s cubic-bezier(.2,.65,.3,1), opacity .38s ease; }
+.btn__t2 { position: absolute; inset: 0; transform: translateY(115%); opacity: 0; }
+.btn:hover .btn__t1 { transform: translateY(-115%); opacity: 0; }
+.btn:hover .btn__t2 { transform: none; opacity: 1; }
+
+/* ---- Ceny: blur crossfade při přepnutí ---- */
+.plan__price .amount { transition: opacity .28s ease, filter .28s ease; will-change: filter; }
+.plan__price .amount.swap { opacity: 0; filter: blur(5px); }
+
+/* ---- Scroll-linked prvky: výchozí stavy + will-change ---- */
+html.js .work { will-change: transform, opacity; }
+html.js .work__media img { will-change: transform; transform: scale(1.12); }
+html.js .service { will-change: transform, opacity; }
+.why__bg img, .cta__bg img { will-change: transform; }
+
+/* ---- Ticker: plynulejší na GPU ---- */
+.ticker__track { will-change: transform; }
+
+/* ---- Pain: mobilní rozložení pilulek ---- */
+@media (max-width: 860px) {
+  .pain { height: 220vh; }
+  .pill--2 { left: 4%; }
+  .pill--3 { right: 3%; }
+  .pill--4 { left: 6%; }
+  .pill--5 { right: 6%; }
+  .pill h5 { font-size: 13px; }
+}
+
+/* ---- Omezený pohyb: vše viditelné, bez animací ---- */
+@media (prefers-reduced-motion: reduce) {
+  html.js .reveal, html.js .pill, html.js .pain__title,
+  html.js [data-split] .ch,
+  html.js .hero__bg, html.js .hero__services p,
+  html.js .hero .eyebrow, html.js .hero .contact-card {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .pain { height: auto; padding: 140px 0; }
+  .pain__sticky { position: static; height: auto; }
+  .pain__cards { position: relative; height: 340px; }
+  .hero__video { display: none; }
 }

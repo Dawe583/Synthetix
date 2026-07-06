@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#050508}
+  canvas{display:block;width:100vw;height:100vh}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+/* Tmavé "kouřové" pozadí hera — periodická animace (perioda = PERIOD ms)
+   pro bezešvou smyčku. Režim ?mode=avatar vykreslí malý pulzující orb. */
+const params = new URLSearchParams(location.search);
+const MODE = params.get('mode') || 'hero';
+const PERIOD = 10000; // ms
+
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+function fit(){ c.width = innerWidth; c.height = innerHeight; }
+fit(); addEventListener('resize', fit);
+
+// blob: {barva, střed dráhy, poloměr dráhy, velikost, fázový posun, násobič frekvence (celé číslo => periodické)}
+const HERO_BLOBS = [
+  { col:[64, 78,132], cx:.24, cy:.22, ox:.10, oy:.07, r:.62, ph:0.0, fx:1, fy:1, a:.62 },
+  { col:[52, 38, 92], cx:.78, cy:.30, ox:.08, oy:.10, r:.55, ph:2.1, fx:1, fy:2, a:.55 },
+  { col:[22, 62, 74], cx:.55, cy:.82, ox:.12, oy:.06, r:.60, ph:4.2, fx:2, fy:1, a:.50 },
+  { col:[90,104,170], cx:.38, cy:.48, ox:.14, oy:.09, r:.38, ph:1.3, fx:1, fy:1, a:.38 },
+  { col:[70, 48,110], cx:.66, cy:.60, ox:.09, oy:.12, r:.42, ph:5.0, fx:2, fy:2, a:.36 },
+];
+const AVATAR_BLOBS = [
+  { col:[120,130,200], cx:.42, cy:.36, ox:.10, oy:.08, r:.72, ph:0.0, fx:1, fy:1, a:.85 },
+  { col:[70, 50,120],  cx:.62, cy:.62, ox:.09, oy:.10, r:.65, ph:2.6, fx:1, fy:2, a:.7 },
+  { col:[30, 70, 90],  cx:.35, cy:.72, ox:.08, oy:.07, r:.55, ph:4.4, fx:2, fy:1, a:.6 },
+];
+const BLOBS = MODE === 'avatar' ? AVATAR_BLOBS : HERO_BLOBS;
+
+// deterministická "zrnitost"
+let grain = null;
+function makeGrain(){
+  const g = document.createElement('canvas');
+  g.width = 160; g.height = 160;
+  const gx = g.getContext('2d');
+  const im = gx.createImageData(160,160);
+  let s = 12345;
+  for (let i=0;i<im.data.length;i+=4){
+    s = (s*1103515245 + 12345) & 0x7fffffff;
+    const v = (s % 255);
+    im.data[i]=im.data[i+1]=im.data[i+2]=v; im.data[i+3]=10;
+  }
+  gx.putImageData(im,0,0);
+  return g;
+}
+grain = makeGrain();
+
+function frame(now){
+  const t = ((now % PERIOD) / PERIOD) * Math.PI * 2; // 0..2π periodicky
+  const w = c.width, h = c.height;
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = '#050508';
+  ctx.fillRect(0,0,w,h);
+  ctx.globalCompositeOperation = 'lighter';
+  for (const b of BLOBS){
+    const x = (b.cx + Math.cos(t*b.fx + b.ph) * b.ox) * w;
+    const y = (b.cy + Math.sin(t*b.fy + b.ph) * b.oy) * h;
+    const rad = b.r * Math.max(w,h) * (1 + 0.06*Math.sin(t + b.ph));
+    const g = ctx.createRadialGradient(x,y,0,x,y,rad);
+    g.addColorStop(0, `rgba(${b.col[0]},${b.col[1]},${b.col[2]},${b.a})`);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,w,h);
+  }
+  // vinětace + zrnitost
+  ctx.globalCompositeOperation = 'source-over';
+  const v = ctx.createRadialGradient(w/2,h*0.45,0,w/2,h*0.45,Math.max(w,h)*0.8);
+  v.addColorStop(0,'rgba(0,0,0,0)');
+  v.addColorStop(1,'rgba(0,0,0,0.55)');
+  ctx.fillStyle = v; ctx.fillRect(0,0,w,h);
+  ctx.save();
+  ctx.globalAlpha = 0.5;
+  for (let gy=0; gy<h; gy+=160) for (let gxp=0; gxp<w; gxp+=160) ctx.drawImage(grain,gxp,gy);
+  ctx.restore();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

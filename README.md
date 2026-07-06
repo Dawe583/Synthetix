@@ -8,17 +8,26 @@ přeložený do češtiny**.
 ## Vlastnosti
 
 - **Tmavý moderní design** (font Geist / Geist Mono, akcenty, zaoblené karty).
-- **Plně soběstačný** — žádná závislost na externím CDN. Veškeré obrázky, loga
-  klientů a ikony integrací jsou lokální SVG (`assets/`), pozadí hera je
-  animované čistě přes CSS.
+- **Plně soběstačný** — žádná závislost na externím CDN:
+  - fonty Geist self-hostované jako variabilní woff2 (OFL licence, plná česká diakritika),
+  - videa generovaná lokálně (`assets/video/*.webm`) s automatickým fallbackem
+    na CSS animaci pro zařízení bez podpory WebM,
+  - obrázky, loga a ikony jako lokální SVG.
+- **Lenis smooth scroll** (vendorováno v `js/vendor/`) — plynulý scroll na kolečku,
+  nativní scroll na dotyku; při `prefers-reduced-motion` se vypíná.
+- **Animace 1:1 podle šablony** (`js/main.js`):
+  - per-písmenkový reveal nadpisů a hero podtitulku,
+  - hero appear sekvence při načtení (pozadí → služby → texty → karta),
+  - sticky „pain point“ sekce se scroll-driven rotací kruhů a postupným
+    zobrazováním pilulek,
+  - perspektivní náklon case-study karet + parallax obrázků uvnitř masky,
+  - scroll-linked dojezd kroků a slide-in karet služeb,
+  - parallax pozadí sekcí Proč my a CTA,
+  - hover slide textu na tlačítkách, blur crossfade cen při přepnutí,
+  - reveal animace, akordeon FAQ, slider referencí, počítadla, mobilní menu.
+- **Běží všude** — bez JS je veškerý obsah viditelný, `prefers-reduced-motion`
+  vše zobrazí staticky, WebM fallback, nativní touch scroll na mobilech.
 - **Responzivní** — desktop, tablet i mobil.
-- **Interaktivní prvky** (`js/main.js`):
-  - lepkavá navigace s pozadím po odscrollování + mobilní menu,
-  - reveal animace při scrollu (IntersectionObserver),
-  - akordeon FAQ,
-  - slider referencí (automatický + šipky),
-  - přepínač ceníku měsíčně / ročně,
-  - animovaná počítadla statistik.
 
 ## Struktura sekcí
 
