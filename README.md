@@ -59,5 +59,11 @@ python3 -m http.server 8000
 ## Přegenerování assetů
 
 ```bash
-python3 scripts/gen_assets.py
+python3 scripts/gen_assets.py     # SVG obrázky, loga, ikony
+python3 scripts/inline.py         # po úpravě css/styles.css nebo js/main.js
 ```
+
+> Pozn.: `package.json` je záměrně mimo repozitář (`.gitignore`), aby Vercel
+> servíroval web jako čistě statický. Dev závislosti pro generování videí
+> a fontů: `lenis`, `geist`, `h264-mp4-encoder`, `pngjs`
+> (`npm i lenis geist h264-mp4-encoder pngjs`).
